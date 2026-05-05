@@ -1,0 +1,815 @@
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookflow — Plan to Read, Rewrite, Summarize, Review</title>
+<meta name="description" content="A modern to-do list application for books to read, rewrite/summarize, or review with video. Organize tasks, progress, and share insights.">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #0b1020;
+    --card: rgba(255,255,255,0.08);
+    --muted: rgba(255,255,255,0.6);
+    --accent: #7c3aed;
+    --accent-2: #22d3ee;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+  html, body {
+    background: radial-gradient(1200px 800px at 10% -10%, rgba(124,58,237,0.25), transparent 60%),
+                radial-gradient(1000px 700px at 110% 10%, rgba(34,211,238,0.25), transparent 60%),
+                linear-gradient(180deg, #0b1020 0%, #0a0f1a 100%);
+    color: #e5e7eb;
+  }
+  .glass {
+    background: var(--card);
+    backdrop-filter: saturate(160%) blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .btn {
+    transition: transform .1s ease, box-shadow .2s ease;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .ring-focus:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.4);
+  }
+  .gradient-text {
+    background: linear-gradient(90deg, #a78bfa, #22d3ee);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tag {
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.35);
+    color: #c4b5fd;
+  }
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+  .drop-target {
+    background: rgba(34,211,238,0.12);
+    border-color: rgba(34,211,238,0.4);
+  }
+  .drag-over {
+    outline: 2px dashed rgba(167,139,250,0.7);
+    outline-offset: -6px;
+  }
+  .progress-ring {
+    background: conic-gradient(var(--accent) var(--p, 0%), rgba(255,255,255,0.12) 0);
+    border-radius: 9999px;
+  }
+  .shadow-soft {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .badge {
+    font-size: 10px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .tooltip {
+    position: relative;
+  }
+  .tooltip:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    background: rgba(17,24,39,0.95);
+    color: #e5e7eb;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .input {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .input:focus {
+    border-color: rgba(124,58,237,0.6);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.25);
+  }
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  }
+</style>
+</head>
+<body class="scroll-smooth">
+  <header class="relative">
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+      <div class="absolute -top-24 -left-24 w-80 h-80 rounded-full blur-3xl" style="background: radial-gradient(circle, rgba(124,58,237,0.35), transparent 60%);"></div>
+      <div class="absolute -top-20 right-0 w-96 h-96 rounded-full blur-3xl" style="background: radial-gradient(circle, rgba(34,211,238,0.35), transparent 60%);"></div>
+    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div class="glass rounded-2xl p-6 sm:p-8 shadow-soft">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div class="space-y-2">
+            <div class="flex items-center gap-3">
+              <span class="inline-flex h-10 w-10 rounded-xl items-center justify-center bg-gradient-to-br from-violet-500 to-cyan-400 shadow-lg shadow-violet-700/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4zM4 9h16v2H4zM4 14h10v2H4z"/></svg>
+              </span>
+              <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Bookflow</h1>
+              <span class="badge px-2 py-1 rounded-full tag">Beta</span>
+            </div>
+            <p class="text-sm sm:text-base text-gray-300 max-w-2xl">Plan to read, rewrite and summarize books, or turn your reviews into videos. Organize your journey with tasks, progress, and shareable insights.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="exportBtn" class="btn ring-focus px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white">Export</button>
+            <label class="btn ring-focus px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-400 text-white cursor-pointer">
+              Import
+              <input type="file" id="importFile" accept="application/json" class="hidden">
+            </label>
+            <button id="newTaskBtn" class="btn ring-focus px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white shadow-lg shadow-violet-700/30 hover:opacity-95">New Task</button>
+          </div>
+        </div>
+        <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="glass rounded-xl p-4">
+            <div class="text-xs text-gray-400">Total Tasks</div>
+            <div id="stat-total" class="text-2xl font-semibold mt-1">0</div>
+          </div>
+          <div class="glass rounded-xl p-4">
+            <div class="text-xs text-gray-400">In Progress</div>
+            <div id="stat-progress" class="text-2xl font-semibold mt-1">0</div>
+          </div>
+          <div class="glass rounded-xl p-4">
+            <div class="text-xs text-gray-400">Completed</div>
+            <div id="stat-done" class="text-2xl font-semibold mt-1">0</div>
+          </div>
+          <div class="glass rounded-xl p-4">
+            <div class="text-xs text-gray-400">This Week</div>
+            <div id="stat-week" class="text-2xl font-semibold mt-1">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <section class="glass rounded-2xl p-4 sm:p-6">
+      <div class="flex flex-col md:flex-row md:items-center gap-4">
+        <div class="relative flex-1">
+          <input id="searchInput" type="text" placeholder="Search by title, author, or note..." class="input w-full rounded-xl px-4 py-3 ring-focus">
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
+          </span>
+        </div>
+        <div class="flex gap-2">
+          <select id="filterStatus" class="input rounded-xl px-3 py-2 ring-focus">
+            <option value="all">All Statuses</option>
+            <option value="todo">To Read</option>
+            <option value="inprogress">In Progress</option>
+            <option value="review">Review/Video</option>
+            <option value="done">Completed</option>
+          </select>
+          <select id="filterType" class="input rounded-xl px-3 py-2 ring-focus">
+            <option value="all">All Types</option>
+            <option value="read">To Read</option>
+            <option value="rewrite">Rewrite</option>
+            <option value="summarize">Summarize</option>
+            <option value="review">Review (Video)</option>
+          </select>
+          <button id="clearFilters" class="btn px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10">Clear</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div class="lg:col-span-3 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs text-gray-400">To Read</div>
+                <div id="col-todo-count" class="text-xl font-semibold">0</div>
+              </div>
+              <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-rose-400 flex items-center justify-center">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4h12M6 20h12M6 7h12M6 17h12"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs text-gray-400">In Progress</div>
+                <div id="col-progress-count" class="text-xl font-semibold">0</div>
+              </div>
+              <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h10M4 17h16"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs text-gray-400">Review/Video</div>
+                <div id="col-review-count" class="text-xl font-semibold">0</div>
+              </div>
+              <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-400 to-indigo-400 flex items-center justify-center">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M4 8h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4z"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs text-gray-400">Completed</div>
+                <div id="col-done-count" class="text-xl font-semibold">0</div>
+              </div>
+              <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                <h3 class="font-semibold">To Read</h3>
+              </div>
+              <span class="text-xs text-gray-400" id="todo-count-label">0</span>
+            </div>
+            <div class="divider mb-3"></div>
+            <div id="col-todo" class="min-h-[200px] space-y-3" data-status="todo" data-type="read"></div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                <h3 class="font-semibold">In Progress</h3>
+              </div>
+              <span class="text-xs text-gray-400" id="progress-count-label">0</span>
+            </div>
+            <div class="divider mb-3"></div>
+            <div id="col-inprogress" class="min-h-[200px] space-y-3" data-status="inprogress"></div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-fuchsia-400"></span>
+                <h3 class="font-semibold">Review/Video</h3>
+              </div>
+              <span class="text-xs text-gray-400" id="review-count-label">0</span>
+            </div>
+            <div class="divider mb-3"></div>
+            <div id="col-review" class="min-h-[200px] space-y-3" data-status="review"></div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold">Completed</h3>
+            <span class="text-xs text-gray-400" id="done-count-label">0</span>
+          </div>
+          <div class="divider mb-3"></div>
+          <div id="col-done" class="min-h-[180px] space-y-3" data-status="done"></div>
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <div class="glass rounded-2xl p-5">
+          <h3 class="font-semibold mb-3">Stats</h3>
+          <div class="space-y-4">
+            <div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-400">Progress</span>
+                <span id="progress-percent" class="gradient-text font-semibold">0%</span>
+              </div>
+              <div class="mt-2 flex items-center gap-4">
+                <div class="progress-ring h-16 w-16 flex items-center justify-center" id="progress-ring" style="--p:0%">
+                  <span id="progress-ring-center" class="text-sm font-semibold">0%</span>
+                </div>
+                <div class="text-xs text-gray-400">
+                  <div><span class="text-gray-300">Completed:</span> <span id="stats-done-text">0</span></div>
+                  <div><span class="text-gray-300">In Progress:</span> <span id="stats-progress-text">0</span></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-400 mb-2">Activity</div>
+              <div id="activity" class="space-y-2 max-h-40 overflow-auto pr-2">
+                <!-- Activity log -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-5">
+          <h3 class="font-semibold mb-3">Quick Add</h3>
+          <form id="quickAddForm" class="space-y-3">
+            <div>
+              <label class="text-sm text-gray-300">Title</label>
+              <input required id="qa-title" class="input w-full rounded-xl px-3 py-2 ring-focus" placeholder="Book title">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm text-gray-300">Author</label>
+                <input id="qa-author" class="input w-full rounded-xl px-3 py-2 ring-focus" placeholder="Author">
+              </div>
+              <div>
+                <label class="text-sm text-gray-300">Goal</label>
+                <select id="qa-goal" class="input w-full rounded-xl px-3 py-2 ring-focus">
+                  <option value="read">To Read</option>
+                  <option value="rewrite">Rewrite</option>
+                  <option value="summarize">Summarize</option>
+                  <option value="review">Review (Video)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="text-sm text-gray-300">Notes</label>
+              <textarea id="qa-notes" class="input w-full rounded-xl px-3 py-2 ring-focus" rows="2" placeholder="Notes, links, etc."></textarea>
+            </div>
+            <button class="btn w-full px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white">Add Task</button>
+          </form>
+        </div>
+
+        <div class="glass rounded-2xl p-5">
+          <h3 class="font-semibold mb-3">Tips</h3>
+          <ul class="text-sm text-gray-300 space-y-2">
+            <li class="flex gap-2"><span class="text-indigo-400">•</span> Drag tasks between columns to move status.</li>
+            <li class="flex gap-2"><span class="text-indigo-400">•</span> Open Review tasks to upload or embed a video.</li>
+            <li class="flex gap-2"><span class="text-indigo-400">•</span> Use filters to find what you're looking for.</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+    <div class="glass rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-sm text-gray-400">Made with curiosity. Your data stays in your browser.</div>
+      <div class="flex items-center gap-2">
+        <button id="clearAll" class="btn px-4 py-2 rounded-xl bg-danger/20 text-red-300 border border-red-300/30">Clear All</button>
+        <a href="#" class="btn px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white">Feedback</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Video Modal -->
+  <div id="videoModal" class="fixed inset-0 hidden items-center justify-center p-4 z-50">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative glass rounded-2xl w-full max-w-3xl p-5 shadow-soft">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold">Review Video</h3>
+        <button id="closeVideoModal" class="btn p-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10">
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-gray-300">Video URL (YouTube, Vimeo, or MP4)</label>
+          <input id="videoUrl" type="url" placeholder="https://..." class="input w-full rounded-xl px-3 py-2 ring-focus">
+          <button id="loadDemoVideo" class="btn mt-2 w-full px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500">Load Demo</button>
+          <div class="text-xs text-gray-400 mt-2">Supports direct embed links and YouTube/IMDB thumbnails.</div>
+        </div>
+        <div>
+          <label class="text-sm text-gray-300">Or paste embed/Iframe</label>
+          <textarea id="videoIframe" rows="3" class="input w-full rounded-xl px-3 py-2 ring-focus" placeholder="<iframe src='...'></iframe>"></textarea>
+          <button id="applyVideo" class="btn mt-2 w-full px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500">Apply</button>
+        </div>
+      </div>
+      <div class="divider my-4"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="aspect-video rounded-xl overflow-hidden bg-black border border-white/10">
+          <iframe id="videoPreview" class="w-full h-full" src="" title="Book Review Video" allowfullscreen></iframe>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <div class="text-sm text-gray-300 mb-1">Video Info</div>
+            <input id="videoTitle" class="input w-full rounded-xl px-3 py-2 ring-focus" placeholder="Video title">
+            <input id="videoAuthor" class="input w-full rounded-xl px-3 py-2 ring-focus" placeholder="Author / Creator">
+          </div>
+          <button id="saveVideo" class="btn w-full px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500">Save to Task</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
+
+  const defaultTasks = [
+    { id: cryptoRandom(), title: "The Silent Patient", author: "Alex Michaelides", goal: "read", notes: "Clinical mystery, unreliable narrator.", status: "todo" },
+    { id: cryptoRandom(), title: "Atomic Habits", author: "James Clear", goal: "summarize", notes: "Systems over habits. 2-week plan.", status: "inprogress" },
+    { id: cryptoRandom(), title: "Kafka", author: "Franz Kafka", goal: "rewrite", notes: "Modern retelling of Metamorphosis.", status: "review" },
+    { id: cryptoRandom(), title: "Becoming", author: "Michelle Obama", goal: "read", notes: "Memoir, chapters 1-3.", status: "done" }
+  ];
+
+  const STORAGE_KEY = "bookflow-tasks-v1";
+  let tasks = loadData();
+
+  function cryptoRandom() {
+    if (window.crypto && crypto.getRandomValues) {
+      const arr = new Uint32Array(1);
+      crypto.getRandomValues(arr);
+      return "t_" + arr[0].toString(36);
+    }
+    return "t_" + Math.random().toString(36).slice(2);
+  }
+
+  function loadData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultTasks));
+        return [...defaultTasks];
+      }
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultTasks));
+      return [...defaultTasks];
+    }
+  }
+
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }
+
+  function activity(msg) {
+    const el = document.createElement("div");
+    el.className = "text-xs text-gray-300 flex items-start gap-2";
+    el.innerHTML = `<span class="mt-1 h-1.5 w-1.5 rounded-full bg-violet-400"></span><span>${msg}</span>`;
+    $("#activity").prepend(el);
+  }
+
+  function updateStats() {
+    const counts = { todo: 0, inprogress: 0, review: 0, done: 0 };
+    tasks.forEach(t => counts[t.status]++);
+    $("#col-todo-count").textContent = counts.todo;
+    $("#col-progress-count").textContent = counts.inprogress;
+    $("#col-review-count").textContent = counts.review;
+    $("#col-done-count").textContent = counts.done;
+
+    const total = tasks.length || 1;
+    const done = counts.done;
+    const pct = Math.round((done / total) * 100);
+    $("#progress-percent").textContent = pct + "%";
+    $("#progress-ring").style.setProperty("--p", pct + "%");
+    $("#progress-ring-center").textContent = pct + "%";
+    $("#stats-done-text").textContent = done;
+    $("#stats-progress-text").textContent = counts.inprogress;
+
+    $("#stat-total").textContent = total;
+    $("#stat-progress").textContent = counts.inprogress;
+    $("#stat-done").textContent = done;
+    const now = new Date();
+    const monday = new Date(now);
+    const day = now.getDay() || 7;
+    monday.setDate(now.getDate() - (day - 1));
+    const weekCount = tasks.filter(t => {
+      const d = new Date(t.completedAt || t.createdAt || Date.now());
+      return d >= monday;
+    }).length;
+    $("#stat-week").textContent = weekCount;
+
+    // counts in sidebar labels
+    $("#todo-count-label").textContent = counts.todo;
+    $("#progress-count-label").textContent = counts.inprogress;
+    $("#review-count-label").textContent = counts.review;
+    $("#done-count-label").textContent = counts.done;
+  }
+
+  function taskCard(t) {
+    const wrap = document.createElement("div");
+    wrap.className = "glass rounded-xl p-3 shadow-soft hover:bg-white/5 transition cursor-grab active:cursor-grabbing";
+    wrap.draggable = true;
+    wrap.dataset.id = t.id;
+    wrap.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="badge px-2 py-0.5 rounded-full ${statusPillClass(t.status)}">${t.status === "inprogress" ? "In Progress" : t.status[0].toUpperCase() + t.status.slice(1)}</span>
+            <span class="badge px-2 py-0.5 rounded-full tag">${goalLabel(t.goal)}</span>
+          </div>
+          <div class="mt-1 font-medium truncate">${escapeHtml(t.title)}</div>
+          <div class="text-xs text-gray-400 truncate">by ${escapeHtml(t.author || "Unknown")}</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="tooltip p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10" data-tip="More" data-action="menu">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zM12 13.75a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zM12 20.75a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/></svg>
+          </button>
+          <button class="p-2 rounded-lg bg-danger/20 text-red-300 hover:bg-danger/25 border border-red-300/30" data-action="delete" title="Delete">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-7 0l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12"/></svg>
+          </button>
+        </div>
+      </div>
+      ${t.notes ? `<div class="mt-2 text-xs text-gray-300 line-clamp-2">${escapeHtml(t.notes)}</div>` : ""}
+      ${t.video ? videoThumb(t.video) : ""}
+    `;
+    // Actions
+    wrap.addEventListener("dragstart", onDragStart);
+    wrap.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === "delete") {
+        tasks = tasks.filter(x => x.id !== t.id);
+        saveData();
+        render();
+        activity(`Deleted task: ${t.title}`);
+      } else if (action === "menu") {
+        openVideoModal(t);
+      }
+    });
+    return wrap;
+  }
+
+  function statusPillClass(s) {
+    switch (s) {
+      case "todo": return "bg-amber-500/20 text-amber-300 border border-amber-400/30";
+      case "inprogress": return "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30";
+      case "review": return "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-400/30";
+      case "done": return "bg-emerald-600/20 text-emerald-300 border border-emerald-400/30";
+      default: return "bg-white/10 text-gray-300 border border-white/10";
+    }
+  }
+
+  function goalLabel(g) {
+    return {
+      read: "To Read",
+      rewrite: "Rewrite",
+      summarize: "Summarize",
+      review: "Review/Video"
+    }[g] || "General";
+  }
+
+  function videoThumb(src) {
+    const yt = parseYouTubeId(src);
+    if (yt) {
+      return `<div class="mt-3 aspect-video rounded-lg overflow-hidden bg-black border border-white/10"><iframe class="w-full h-full" src="https://www.youtube.com/embed/${yt}" title="YouTube video" allowfullscreen></iframe></div>`;
+    }
+    return `<div class="mt-3 aspect-video rounded-lg overflow-hidden bg-black border border-white/10 flex items-center justify-center text-xs text-gray-400">Video Attached</div>`;
+  }
+
+  function parseYouTubeId(url) {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes("youtu.be")) return u.pathname.slice(1);
+      if (u.hostname.includes("youtube.com")) return u.searchParams.get("v") || "";
+    } catch {}
+    return "";
+  }
+
+  function escapeHtml(str = "") {
+    return String(str).replace(/[&<>"'`=\/]/g, s => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "/": "&#x2F;", "`": "&#x60;", "=": "&#x3D;"
+    }[s]));
+  }
+
+  function render() {
+    const cols = {
+      todo: $("#col-todo"),
+      inprogress: $("#col-inprogress"),
+      review: $("#col-review"),
+      done: $("#col-done")
+    };
+    Object.values(cols).forEach(c => c.innerHTML = "");
+
+    const q = $("#searchInput").value.toLowerCase().trim();
+    const fStatus = $("#filterStatus").value;
+    const fType = $("#filterType").value;
+
+    const filtered = tasks.filter(t => {
+      const matchesQ = !q || [t.title, t.author, t.notes].join(" ").toLowerCase().includes(q);
+      const matchesS = fStatus === "all" || t.status === fStatus;
+      const matchesT = fType === "all" || t.goal === fType;
+      return matchesQ && matchesS && matchesT;
+    });
+
+    filtered.forEach(t => {
+      const card = taskCard(t);
+      cols[t.status].appendChild(card);
+    });
+
+    // Make columns drop targets
+    $$('[data-status]').forEach(column => {
+      column.addEventListener("dragover", onDragOver);
+      column.addEventListener("dragleave", onDragLeave);
+      column.addEventListener("drop", onDrop);
+    });
+
+    updateStats();
+  }
+
+  let dragId = null;
+
+  function onDragStart(e) {
+    const id = e.currentTarget.dataset.id;
+    dragId = id;
+    e.dataTransfer.setData("text/plain", id);
+    setTimeout(() => e.currentTarget.classList.add("opacity-50"), 0);
+  }
+
+  function onDragOver(e) {
+    e.preventDefault();
+    const col = e.currentTarget;
+    col.classList.add("drag-over");
+  }
+
+  function onDragLeave(e) {
+    e.currentTarget.classList.remove("drag-over");
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    const target = e.currentTarget;
+    target.classList.remove("drag-over");
+    const id = e.dataTransfer.getData("text/plain") || dragId;
+    const t = tasks.find(x => x.id === id);
+    if (t) {
+      t.status = e.currentTarget.dataset.status;
+      t.completedAt = t.status === "done" ? new Date().toISOString() : null;
+      saveData();
+      render();
+      activity(`Moved: ${t.title} → ${t.status}`);
+    }
+  }
+
+  function addTask(data) {
+    const t = {
+      id: cryptoRandom(),
+      title: data.title || "Untitled",
+      author: data.author || "",
+      goal: data.goal || "read",
+      notes: data.notes || "",
+      status: data.status || "todo",
+      video: data.video || null,
+      createdAt: new Date().toISOString()
+    };
+    tasks.unshift(t);
+    saveData();
+    render();
+    activity(`Added: ${t.title}`);
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveData();
+    render();
+    activity("Task deleted");
+  }
+
+  // Video modal logic
+  let videoTaskId = null;
+
+  function openVideoModal(task = null) {
+    videoTaskId = task ? task.id : null;
+    $("#videoModal").classList.remove("hidden");
+    $("#videoModal").classList.add("flex");
+    if (task?.video) {
+      const yt = parseYouTubeId(task.video);
+      if (yt) {
+        $("#videoPreview").src = `https://www.youtube.com/embed/${yt}`;
+      } else if (task.video.includes("youtube.com") || task.video.includes("youtu.be")) {
+        const id = parseYouTubeId(task.video);
+        if (id) $("#videoPreview").src = `https://www.youtube.com/embed/${id}`;
+      } else {
+        $("#videoPreview").src = task.video;
+      }
+      $("#videoTitle").value = task.title;
+      $("#videoAuthor").value = task.author || "";
+      $("#videoUrl").value = task.video;
+      if (task.video.includes("embed") || task.video.includes("iframe")) {
+        $("#videoIframe").value = task.video;
+      }
+    } else {
+      $("#videoPreview").src = "";
+      $("#videoTitle").value = "";
+      $("#videoAuthor").value = "";
+      $("#videoUrl").value = "";
+      $("#videoIframe").value = "";
+    }
+  }
+
+  function closeVideoModal() {
+    $("#videoModal").classList.add("hidden");
+    $("#videoModal").classList.remove("flex");
+    $("#videoPreview").src = "";
+  }
+
+  function attachModalHandlers() {
+    $("#closeVideoModal").addEventListener("click", closeVideoModal);
+    $("#loadDemoVideo").addEventListener("click", () => {
+      $("#videoUrl").value = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+      const id = parseYouTubeId("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+      if (id) $("#videoPreview").src = `https://www.youtube.com/embed/${id}`;
+    });
+    $("#applyVideo").addEventListener("click", () => {
+      const url = $("#videoUrl").value.trim();
+      const iframe = $("#videoIframe").value.trim();
+      if (url) {
+        $("#videoPreview").src = url;
+      } else if (iframe) {
+        $("#videoPreview").srcdoc = iframe; // iframe replacement
+      } else {
+        $("#videoPreview").src = "";
+      }
+    });
+    $("#saveVideo").addEventListener("click", () => {
+      if (!videoTaskId) return;
+      const t = tasks.find(x => x.id === videoTaskId);
+      if (!t) return;
+      const title = $("#videoTitle").value.trim() || t.title;
+      const author = $("#videoAuthor").value.trim();
+      t.title = title;
+      t.author = author;
+      t.video = $("#videoPreview").src;
+      saveData();
+      render();
+      closeVideoModal();
+      activity(`Updated video for "${t.title}"`);
+    });
+  }
+
+  // Event bindings
+  $("#newTaskBtn").addEventListener("click", () => {
+    $("#qa-title").focus();
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  });
+
+  $("#quickAddForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = $("#qa-title").value.trim();
+    const author = $("#qa-author").value.trim();
+    const goal = $("#qa-goal").value;
+    const notes = $("#qa-notes").value.trim();
+    if (!title) return;
+    addTask({ title, author, goal, notes, status: "todo" });
+    $("#qa-title").value = "";
+    $("#qa-author").value = "";
+    $("#qa-notes").value = "";
+  });
+
+  $("#searchInput").addEventListener("input", render);
+  $("#filterStatus").addEventListener("change", render);
+  $("#filterType").addEventListener("change", render);
+  $("#clearFilters").addEventListener("click", () => {
+    $("#searchInput").value = "";
+    $("#filterStatus").value = "all";
+    $("#filterType").value = "all";
+    render();
+  });
+
+  $("#clearAll").addEventListener("click", () => {
+    if (confirm("Clear all tasks? This cannot be undone.")) {
+      tasks = [];
+      saveData();
+      render();
+      activity("All tasks cleared");
+    }
+  });
+
+  $("#exportBtn").addEventListener("click", () => {
+    const data = JSON.stringify(tasks, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bookflow-export.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  $("#importFile").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    try {
+      const incoming = JSON.parse(text);
+      if (!Array.isArray(incoming)) throw new Error("Invalid file");
+      // Merge by id
+      const idSet = new Set(tasks.map(t => t.id));
+      incoming.forEach(it => {
+        if (!it.id || idSet.has(it.id)) it.id = cryptoRandom();
+      });
+      tasks = [...incoming, ...tasks];
+      saveData();
+      render();
+      activity("Imported tasks");
+    } catch {
+      alert("Invalid JSON file.");
+    }
+    e.target.value = "";
+  });
+
+  // Initial render
+  attachModalHandlers();
+  render();
+</script>
+</body>
+</html>
